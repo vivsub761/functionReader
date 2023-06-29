@@ -4,25 +4,30 @@ import argparse
 
 
 def astUpdate(filepath):
+    # stores results
     functionDict = {}
 
+    # read file data into variable
     with open(filepath, "rb") as f:
         file_data = f.read()
+    # create abstract snytax tree from read data
     astTree = ast.parse(file_data, filepath)
     for node in ast.walk(astTree):
+        # check if the node corresponds to a function
         if isinstance(node, ast.FunctionDef):
-            funcName = node.name
-            functionDict[funcName] = {}
+            # populate json
+            functionDict[node.name] = {}
             docstring = ast.get_docstring(node).strip().replace("\n", " ").split()
-            functionDict[funcName]["Description"] = " ".join(docstring)
-            functionDict[funcName]["Input(s)"] = getExpectedArgs(node)
-            functionDict[funcName]["Output(s)"] = getExpectedOutputs(node)
+            functionDict[node.name]["Description"] = " ".join(docstring)
+            functionDict[node.name]["Input(s)"] = getExpectedArgs(node)
+            functionDict[node.name]["Output(s)"] = getExpectedOutputs(node)
     
             
     return functionDict
 
 def getExpectedOutputs(astNode):
     def returnOutputName(element):
+        # This checks if the return value is a constant or a variable and returns the appropriate value
         if isinstance(element, ast.Name):
             return element.id
         elif isinstance(element, ast.Constant):
@@ -30,21 +35,26 @@ def getExpectedOutputs(astNode):
         return ""
     outputs = {}
     outputNames = []
+    # if the last line is a tuple, then there are multiple return values
     if isinstance(astNode.body[-1].value, ast.Tuple):
+        # iterate through each return value and add the variable name
         for element in astNode.body[-1].value.elts:
             outputNames.append(returnOutputName(element))
     else:
+        # otherwise there is only one return value, just add it
         outputNames.append(returnOutputName(astNode.body[-1].value))
     
     outputTypes = []
+    # if astNode.retuns is a subscript type, there is more than one return annotation
     if isinstance(astNode.returns, ast.Subscript):
+        # iterate through each return type 
         for element in astNode.returns.slice.elts:
+            # have to do some string addition here if the element is an attribute
             outputTypes.append(element.value.id + "." + element.attr if isinstance(element, ast.Attribute) else element.id)
     else:
-        if isinstance(astNode.returns, ast.Name):
-            outputTypes.append(astNode.returns.id)
-        elif isinstance(astNode.returns, ast.Attribute):
-            outputTypes.append(astNode.returns.value.id + "." + astNode.returns.attr)
+        outputTypes.append(astNode.returns.value.id + "." + astNode.returns.attr if isinstance(astNode.returns, ast.Attribute) else astNode.returns.id)
+    
+    # add output names and types to json and return it
     for outName, outType in zip(outputNames, outputTypes):
         outputs[outName] = outType
     return outputs
