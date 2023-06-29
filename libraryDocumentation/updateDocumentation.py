@@ -45,14 +45,25 @@ def getExpectedOutputs(astNode):
         outputNames.append(returnOutputName(astNode.body[-1].value))
     
     outputTypes = []
-    # if astNode.retuns is a subscript type, there is more than one return annotation
-    if isinstance(astNode.returns, ast.Subscript):
-        # iterate through each return type 
-        for element in astNode.returns.slice.elts:
-            # have to do some string addition here if the element is an attribute
-            outputTypes.append(element.value.id + "." + element.attr if isinstance(element, ast.Attribute) else element.id)
+
+    # gets returns types as string
+    ret = ast.unparse(astNode.returns).strip()
+    # if ret starts with tuple, there are multiple 
+    if ret.startswith("Tuple"):
+        # remove the 'Tuple[' from the beginning and the ']' from the end
+        res = ret[6:-1].split(",")
+        # split and remove spaces to get individual types
+        outputTypes = [s.strip() for s in res]
     else:
-        outputTypes.append(astNode.returns.value.id + "." + astNode.returns.attr if isinstance(astNode.returns, ast.Attribute) else astNode.returns.id)
+        outputTypes = [ret]
+
+    # if isinstance(astNode.returns, ast.Subscript):
+    #     # iterate through each return type 
+    #     for element in astNode.returns.slice.elts:
+    #         # have to do some string addition here if the element is an attribute
+    #         outputTypes.append(element.value.id + "." + element.attr if isinstance(element, ast.Attribute) else element.id)
+    # else:
+    #     outputTypes.append(astNode.returns.value.id + "." + astNode.returns.attr if isinstance(astNode.returns, ast.Attribute) else astNode.returns.id)
     
     # add output names and types to json and return it
     for outName, outType in zip(outputNames, outputTypes):
