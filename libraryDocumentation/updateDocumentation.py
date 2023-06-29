@@ -67,9 +67,10 @@ def getExpectedArgs(astNode):
 parser = argparse.ArgumentParser(description="Takes in a file of functions and returns a json object that describes them in the following format {'function_name': {'Description': text, 'Inputs': {'nameOfInput': 'typeofInput',...}, 'Outputs': {'nameOfOutput': 'typeofOutput',....}}, ...}")
 parser.add_argument("-f", "--targetFile", help = "Filepath to file containing functions")
 args = parser.parse_args()
-
+if not args.targetFile:
+    print("Please input path to file with functions when running this file with the flag -f")
+    exit()
 res = astUpdate(args.targetFile)
-print(res)
 with open("documentation.json", "w") as f:
     json.dump(res, f)
 
